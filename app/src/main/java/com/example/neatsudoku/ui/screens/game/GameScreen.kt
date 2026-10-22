@@ -1,18 +1,18 @@
+
 package com.example.neatsudoku.ui.screens.game
 
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,25 +24,23 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.AndroidViewModel
+import androidx.compose.ui.platform.LocalDensity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.neatsudoku.domain.model.SudokuBoard
-import com.example.neatsudoku.ui.navigation.Screen
-import com.example.neatsudoku.ui.viewmodel.GameViewModel
-import androidx.compose.foundation.background
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.draw.drawBehind
 import com.example.neatsudoku.ui.theme.SudokuColors
-import androidx.compose.ui.text.font.FontWeight
+import com.example.neatsudoku.ui.viewmodel.GameViewModel
 
 @Composable
 fun GameScreen(
+    onWin: () -> Unit,
     viewModel: GameViewModel = viewModel()
-){
+) {
     val sudokuColors = SudokuColors(
         selectedCell = Color.LightGray,
         selectedRowColumn = Color(0xFFE8E8E8),
@@ -54,21 +52,37 @@ fun GameScreen(
     )
 
     val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState.isWon) {
+        if (uiState.isWon) {
+            onWin()
+        }
+    }
     LaunchedEffect(Unit) {
         viewModel.startNewGame()
     }
+
     val game = uiState.game
 
-    if (game == null){
-        Box(Modifier.fillMaxSize(), Alignment.Center){
-         Text("Creating Game")
+    if (game == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Creating Game")
         }
         return
     }
-    Column(Modifier.fillMaxSize().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
 
-        Text("Sudoku", fontSize = 32.sp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = "Sudoku",
+            fontSize = 32.sp
+        )
 
         Spacer(modifier = Modifier.size(24.dp))
 
@@ -78,11 +92,28 @@ fun GameScreen(
             selectedColumn = uiState.selectedColumn,
             incorrectCells = uiState.incorrectCells,
             colors = sudokuColors,
-            onCellClick = {
-                row, column -> viewModel.selectCell(row,column)
+            onCellClick = { row, column ->
+                viewModel.selectCell(row, column)
             }
         )
+
         Spacer(modifier = Modifier.size(24.dp))
+
+        Button(
+            onClick = {
+                viewModel.togglePencilMode()
+            }
+        ) {
+            Text(
+                text = if (uiState.isPencilMode) {
+                    "Pencil: ON"
+                } else {
+                    "Pencil: OFF"
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.size(8.dp))
 
         NumberPad(
             onNumberClick = { number ->
@@ -104,14 +135,13 @@ fun GameScreen(
 @Composable
 private fun SudokuCellView(
     value: Int?,
+    pencilMarks: Set<Int>,
     isSameValue: Boolean,
     isGiven: Boolean,
     isSelected: Boolean,
     isInSelectedRow: Boolean,
     isInSelectedColumn: Boolean,
     isIncorrect: Boolean,
-    isRightBoxEdge: Boolean,
-    isBottomBoxEdge: Boolean,
     colors: SudokuColors,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -121,37 +151,29 @@ private fun SudokuCellView(
         isGiven -> colors.givenNumber
         else -> colors.playerNumber
     }
+
     val backgroundModifier = when {
-        isSelected -> Modifier.background(Color.LightGray)
+        isSelected -> Modifier.background(colors.selectedCell)
         isInSelectedRow || isInSelectedColumn ->
-            Modifier.background(Color(0xFFE8E8E8))
+            Modifier.background(colors.selectedRowColumn)
         isSameValue -> Modifier.background(Color(0xFFEBEBEB))
         else -> Modifier
+    }
+
+    val density = LocalDensity.current
+
+    val mainNumberSize = with(density) {
+        (24.sp.toPx() / fontScale).toSp()
+    }
+
+    val pencilNumberSize = with(density) {
+        (9.sp.toPx() / fontScale).toSp()
     }
 
     Box(
         modifier = modifier
             .then(backgroundModifier)
-            .border(0.5.dp, Color.Gray)
-            .drawBehind {
-                if (isRightBoxEdge) {
-                    drawLine(
-                        color = Color.Black,
-                        start = Offset(size.width, 0f),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 3.dp.toPx()
-                    )
-                }
-
-                if (isBottomBoxEdge) {
-                    drawLine(
-                        color = Color.Black,
-                        start = Offset(0f, size.height),
-                        end = Offset(size.width, size.height),
-                        strokeWidth = 3.dp.toPx()
-                    )
-                }
-            }
+            .border(0.5.dp, colors.gridLine)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -159,13 +181,44 @@ private fun SudokuCellView(
             Text(
                 text = value.toString(),
                 color = numberColor,
-                fontSize = 24.sp,
+                fontSize = mainNumberSize,
                 fontWeight = if (isSameValue) {
                     FontWeight.Bold
                 } else {
                     FontWeight.Normal
                 }
             )
+        } else if (pencilMarks.isNotEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                for (row in 0 until 3) {
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                    ) {
+                        for (column in 0 until 3) {
+                            val number = row * 3 + column + 1
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (number in pencilMarks) {
+                                    Text(
+                                        text = number.toString(),
+                                        fontSize = pencilNumberSize,
+                                        lineHeight = pencilNumberSize
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -175,7 +228,7 @@ private fun SudokuGrid(
     board: SudokuBoard,
     selectedRow: Int?,
     selectedColumn: Int?,
-    incorrectCells: Set<Pair<Int,Int>>,
+    incorrectCells: Set<Pair<Int, Int>>,
     colors: SudokuColors,
     onCellClick: (Int, Int) -> Unit
 ) {
@@ -183,9 +236,9 @@ private fun SudokuGrid(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(1f)
-            .border(2.dp, Color.Black)
     ) {
         val cellSize = maxWidth / 9
+
         val selectedValue =
             if (selectedRow != null && selectedColumn != null) {
                 board.cells[selectedRow][selectedColumn].value
@@ -199,6 +252,7 @@ private fun SudokuGrid(
 
                 SudokuCellView(
                     value = cell.value,
+                    pencilMarks = cell.pencilMarks,
                     isSameValue = cell.value != null &&
                             cell.value == selectedValue,
                     isGiven = cell.isGiven,
@@ -207,8 +261,6 @@ private fun SudokuGrid(
                     isInSelectedRow = row == selectedRow,
                     isInSelectedColumn = column == selectedColumn,
                     isIncorrect = (row to column) in incorrectCells,
-                    isRightBoxEdge = column == 2 || column == 5 || column == 8,
-                    isBottomBoxEdge = row == 2 || row == 5 || row == 8,
                     colors = colors,
                     onClick = {
                         onCellClick(row, column)
@@ -222,11 +274,51 @@ private fun SudokuGrid(
                 )
             }
         }
+
+        // Draw the thick 3x3 boundaries above all cell backgrounds.
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val cellWidth = size.width / 9f
+                    val cellHeight = size.height / 9f
+
+                    for (line in 1..2) {
+                        val x = cellWidth * line * 3
+
+                        drawLine(
+                            color = colors.boxLine,
+                            start = Offset(x, 0f),
+                            end = Offset(x, size.height),
+                            strokeWidth = 3.dp.toPx()
+                        )
+                    }
+
+                    for (line in 1..2) {
+                        val y = cellHeight * line * 3
+
+                        drawLine(
+                            color = colors.boxLine,
+                            start = Offset(0f, y),
+                            end = Offset(size.width, y),
+                            strokeWidth = 3.dp.toPx()
+                        )
+                    }
+                }
+        )
+
+        // Draw the outer border last so it stays consistently black.
+        Spacer(
+            modifier = Modifier
+                .fillMaxSize()
+                .border(2.dp, Color.Black)
+        )
     }
 }
 
 @Composable
-private fun NumberPad(onNumberClick: (Int) -> Unit
+private fun NumberPad(
+    onNumberClick: (Int) -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally

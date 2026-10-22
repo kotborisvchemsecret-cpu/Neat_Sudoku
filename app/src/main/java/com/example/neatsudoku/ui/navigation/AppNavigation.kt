@@ -7,7 +7,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.neatsudoku.ui.screens.game.GameScreen
 import com.example.neatsudoku.ui.screens.settings.SettingsScreen
-
+import com.example.neatsudoku.ui.screens.game.WinScreen
 
 @Composable
 fun AppNavigation() {
@@ -31,10 +31,26 @@ fun AppNavigation() {
             )
         }
         composable(Screen.Game.route) {
-            GameScreen()
+            GameScreen(onWin = {navController.navigate(Screen.Win.route){ launchSingleTop = true} })
         }
         composable(Screen.Settings.route) {
             SettingsScreen()
+        }
+        composable(Screen.Win.route) {
+            WinScreen(
+                onPlayAgainClick = {
+                    navController.navigate(Screen.Game.route) {
+                        popUpTo(Screen.MainMenu.route)
+                        launchSingleTop = true
+                    }
+                },
+                onMainMenuClick = {
+                    navController.popBackStack(
+                        Screen.MainMenu.route,
+                        inclusive = false
+                    )
+                }
+            )
         }
     }
 }
