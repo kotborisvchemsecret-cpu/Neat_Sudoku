@@ -14,23 +14,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.neatsudoku.domain.model.Difficulty
+import com.example.neatsudoku.ui.screens.difficulty.DifficultySelectionScreen
 import com.example.neatsudoku.ui.screens.game.GameOverScreen
 import com.example.neatsudoku.ui.screens.game.GameScreen
 import com.example.neatsudoku.ui.screens.game.WinScreen
 import com.example.neatsudoku.ui.screens.mainmenu.MainMenuScreen
 import com.example.neatsudoku.ui.screens.settings.SettingsScreen
 import com.example.neatsudoku.ui.viewmodel.GameViewModel
+import androidx.core.content.edit
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    // Shared ViewModel for the entire navigation host.
+    // Shared game ViewModel
     val gameViewModel: GameViewModel = viewModel()
-
     val gameState by gameViewModel.uiState.collectAsState()
 
-    // Persistent color preferences.
+    // Saved color preferences
     val context = LocalContext.current
 
     val preferences = remember {
@@ -75,11 +77,9 @@ fun AppNavigation() {
                         !gameState.isGameOver,
 
                 onNewGameClick = {
-                    gameViewModel.startNewGame()
-
-                    navController.navigate(Screen.Game.route) {
-                        launchSingleTop = true
-                    }
+                    navController.navigate(
+                        Screen.DifficultySelection.route
+                    )
                 },
 
                 onContinueClick = {
@@ -92,6 +92,27 @@ fun AppNavigation() {
 
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
+                }
+            )
+        }
+
+        // DIFFICULTY SELECTION
+        composable(Screen.DifficultySelection.route) {
+            DifficultySelectionScreen(
+                onStartGame = { difficulty: Difficulty ->
+
+                    gameViewModel.startNewGame(difficulty)
+
+                    navController.navigate(Screen.Game.route) {
+                        popUpTo(Screen.DifficultySelection.route) {
+                            inclusive = true
+                        }
+                        launchSingleTop = true
+                    }
+                },
+
+                onBackClick = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -134,22 +155,21 @@ fun AppNavigation() {
                 onIncorrectColorChange = { color ->
                     incorrectNumberColor = color
 
-                    preferences.edit()
-                        .putInt("incorrect_color", color.toArgb())
-                        .apply()
+                    preferences.edit {
+                        putInt("incorrect_color", color.toArgb())
+                    }
                 }
             )
         }
 
-        // WIN SCREEN
+        // WIN
         composable(Screen.Win.route) {
             WinScreen(
                 onPlayAgainClick = {
-                    gameViewModel.startNewGame()
-
-                    navController.navigate(Screen.Game.route) {
+                    navController.navigate(
+                        Screen.DifficultySelection.route
+                    ) {
                         popUpTo(Screen.MainMenu.route)
-                        launchSingleTop = true
                     }
                 },
 
@@ -162,15 +182,14 @@ fun AppNavigation() {
             )
         }
 
-        // GAME OVER SCREEN
+        // GAME OVER
         composable(Screen.GameOver.route) {
             GameOverScreen(
                 onTryAgainClick = {
-                    gameViewModel.startNewGame()
-
-                    navController.navigate(Screen.Game.route) {
+                    navController.navigate(
+                        Screen.DifficultySelection.route
+                    ) {
                         popUpTo(Screen.MainMenu.route)
-                        launchSingleTop = true
                     }
                 },
 

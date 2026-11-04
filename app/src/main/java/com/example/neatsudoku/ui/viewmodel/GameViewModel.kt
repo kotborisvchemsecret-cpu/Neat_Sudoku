@@ -1,26 +1,43 @@
 package com.example.neatsudoku.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.example.neatsudoku.data.repository.GameProgressRepository
 import com.example.neatsudoku.domain.model.Difficulty
 import com.example.neatsudoku.domain.service.SudokuGameService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GameViewModel : ViewModel() {
+class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val MAX_MISTAKES = 3
     }
 
     private val gameService = SudokuGameService()
+    private val progressRepository = GameProgressRepository(application)
 
-    private val _uiState = MutableStateFlow(GameUiState())
+    private val _uiState = MutableStateFlow(
+        progressRepository.load() ?: GameUiState()
+    )
+
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
+
+    private fun updateState(newState: GameUiState) {
+        _uiState.value = newState
+        progressRepository.save(newState)
+    }
 
     fun startNewGame(difficulty: Difficulty = Difficulty.EASY) {
         val game = gameService.createNewGame(difficulty)
-        _uiState.value = GameUiState(game = game)
+
+        updateState(
+            GameUiState(
+                game = game,
+                difficulty = difficulty
+            )
+        )
     }
 
     fun ensureGameExists() {
@@ -34,9 +51,11 @@ class GameViewModel : ViewModel() {
 
         if (state.isWon || state.isGameOver) return
 
-        _uiState.value = state.copy(
-            selectedRow = row,
-            selectedColumn = column
+        updateState(
+            state.copy(
+                selectedRow = row,
+                selectedColumn = column
+            )
         )
     }
 
@@ -51,7 +70,6 @@ class GameViewModel : ViewModel() {
 
         if (cell.isGiven || cell.value == correctValue) return
 
-        // An incorrect entry can be removed by tapping the same number again.
         if ((row to column) in state.incorrectCells) {
             if (state.isPencilMode || cell.value != value) return
         }
@@ -114,12 +132,14 @@ class GameViewModel : ViewModel() {
                             game.solution.cells[currentCell.row][currentCell.column].value
                 }
 
-        _uiState.value = state.copy(
-            game = game.copy(board = updatedBoard),
-            incorrectCells = updatedIncorrectCells,
-            mistakes = updatedMistakes,
-            isWon = isWon,
-            isGameOver = isGameOver
+        updateState(
+            state.copy(
+                game = game.copy(board = updatedBoard),
+                incorrectCells = updatedIncorrectCells,
+                mistakes = updatedMistakes,
+                isWon = isWon,
+                isGameOver = isGameOver
+            )
         )
     }
 
@@ -128,8 +148,10 @@ class GameViewModel : ViewModel() {
 
         if (state.isWon || state.isGameOver) return
 
-        _uiState.value = state.copy(
-            isPencilMode = !state.isPencilMode
+        updateState(
+            state.copy(
+                isPencilMode = !state.isPencilMode
+            )
         )
     }
 }

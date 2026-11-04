@@ -18,8 +18,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -93,12 +93,13 @@ fun GameScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
-        // Respect the status bar and camera cutout.
+        // Keep the title below the status bar and camera area.
         Spacer(
             modifier = Modifier.windowInsetsTopHeight(
-                WindowInsets.safeDrawing
+                WindowInsets.statusBars
             )
         )
 
@@ -107,14 +108,15 @@ fun GameScreen(
             fontSize = 32.sp
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = "Mistakes: ${uiState.mistakes}/${GameViewModel.MAX_MISTAKES}",
             color = if (uiState.mistakes > 0) Color.Red else Color.DarkGray
         )
 
-        Spacer(modifier = Modifier.weight(1f))
+        // Keep the grid close to the header.
+        Spacer(modifier = Modifier.height(16.dp))
 
         SudokuGrid(
             board = game.board,
@@ -127,7 +129,7 @@ fun GameScreen(
             }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(25.dp))
 
         Button(
             onClick = {
@@ -143,7 +145,7 @@ fun GameScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         NumberRow(
             onNumberClick = { number ->
@@ -155,8 +157,6 @@ fun GameScreen(
                 }
             }
         )
-
-        Spacer(modifier = Modifier.weight(1f))
     }
 }
 

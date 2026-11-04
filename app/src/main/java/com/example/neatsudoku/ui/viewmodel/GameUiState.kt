@@ -1,9 +1,11 @@
 package com.example.neatsudoku.ui.viewmodel
 
+import com.example.neatsudoku.domain.model.Difficulty
 import com.example.neatsudoku.domain.model.SudokuGame
 
-data class GameUiState (
+data class GameUiState(
     val game: SudokuGame? = null,
+    val difficulty: Difficulty = Difficulty.EASY,
     val isWon: Boolean = false,
     val isGameOver: Boolean = false,
     val mistakes: Int = 0,
