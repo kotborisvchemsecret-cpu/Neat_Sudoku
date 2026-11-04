@@ -11,10 +11,6 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class GameViewModel(application: Application) : AndroidViewModel(application) {
 
-    companion object {
-        const val MAX_MISTAKES = 3
-    }
-
     private val gameService = SudokuGameService()
     private val progressRepository = GameProgressRepository(application)
 
@@ -59,7 +55,12 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
-    fun setCellValue(row: Int, column: Int, value: Int) {
+    fun setCellValue(
+        row: Int,
+        column: Int,
+        value: Int,
+        autoRemovePencilNotes: Boolean = false
+    ) {
         val state = _uiState.value
         val game = state.game ?: return
 
@@ -85,7 +86,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         val isCorrect = updatedValue == null ||
                 updatedValue == correctValue
 
-        val updatedCells = game.board.cells.mapIndexed { r, cells ->
+        var updatedCells = game.board.cells.mapIndexed { r, cells ->
             cells.mapIndexed { c, currentCell ->
                 if (r == row && c == column) {
                     if (state.isPencilMode) {
@@ -110,6 +111,39 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+        // Remove the entered number from pencil notes in its
+        // row, column and 3x3 box.
+        if (
+            autoRemovePencilNotes &&
+            !state.isPencilMode &&
+            updatedValue != null
+        ) {
+            updatedCells = updatedCells.mapIndexed { r, cells ->
+                cells.mapIndexed { c, currentCell ->
+                    val isSameCell = r == row && c == column
+
+                    val isSameRow = r == row
+                    val isSameColumn = c == column
+
+                    val isSameBox =
+                        r / 3 == row / 3 &&
+                                c / 3 == column / 3
+
+                    if (
+                        !isSameCell &&
+                        currentCell.value == null &&
+                        (isSameRow || isSameColumn || isSameBox)
+                    ) {
+                        currentCell.copy(
+                            pencilMarks = currentCell.pencilMarks - updatedValue
+                        )
+                    } else {
+                        currentCell
+                    }
+                }
+            }
+        }
+
         val updatedBoard = game.board.copy(cells = updatedCells)
         val updatedIncorrectCells = state.incorrectCells.toMutableSet()
 
@@ -124,7 +158,8 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        val isGameOver = updatedMistakes >= MAX_MISTAKES
+        val isGameOver =
+            updatedMistakes > state.difficulty.allowedMistakes
 
         val isWon = !isGameOver &&
                 updatedBoard.cells.flatten().all { currentCell ->

@@ -36,7 +36,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.neatsudoku.domain.model.SudokuBoard
 import com.example.neatsudoku.ui.theme.SudokuColors
 import com.example.neatsudoku.ui.viewmodel.GameViewModel
@@ -47,6 +46,8 @@ fun GameScreen(
     onGameOver: () -> Unit,
     playerNumberColor: Color,
     incorrectNumberColor: Color,
+    autoRemovePencilNotes: Boolean,
+    hideCompletedNumbers: Boolean,
     viewModel: GameViewModel
 ) {
     val sudokuColors = SudokuColors(
@@ -88,6 +89,15 @@ fun GameScreen(
         }
         return
     }
+    val solutionCells = game.solution.cells.flatten()
+
+    val completedNumbers = (1..9).filter { number ->
+        solutionCells
+            .filter { it.value == number }
+            .all { solutionCell ->
+                game.board.cells[solutionCell.row][solutionCell.column].value == number
+            }
+    }.toSet()
 
     Column(
         modifier = Modifier
@@ -111,7 +121,7 @@ fun GameScreen(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Mistakes: ${uiState.mistakes}/${GameViewModel.MAX_MISTAKES}",
+            text = "Mistakes: ${uiState.mistakes}/${uiState.difficulty.allowedMistakes}",
             color = if (uiState.mistakes > 0) Color.Red else Color.DarkGray
         )
 
@@ -148,12 +158,22 @@ fun GameScreen(
         Spacer(modifier = Modifier.height(4.dp))
 
         NumberRow(
+            hiddenNumbers = if (hideCompletedNumbers) {
+                completedNumbers
+            } else {
+                emptySet()
+            },
             onNumberClick = { number ->
                 val row = uiState.selectedRow
                 val column = uiState.selectedColumn
 
                 if (row != null && column != null) {
-                    viewModel.setCellValue(row, column, number)
+                    viewModel.setCellValue(
+                        row = row,
+                        column = column,
+                        value = number,
+                        autoRemovePencilNotes = autoRemovePencilNotes
+                    )
                 }
             }
         )
@@ -347,6 +367,7 @@ private fun SudokuGrid(
 
 @Composable
 private fun NumberRow(
+    hiddenNumbers: Set<Int>,
     onNumberClick: (Int) -> Unit
 ) {
     Row(
@@ -354,21 +375,23 @@ private fun NumberRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         for (number in 1..9) {
-            Button(
-                onClick = { onNumberClick(number) },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+            if (number !in hiddenNumbers) {
+                Button(
+                    onClick = { onNumberClick(number) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text(
-                        text = number.toString(),
-                        fontSize = 16.sp
-                    )
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = number.toString(),
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
         }

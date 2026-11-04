@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.edit
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,17 +23,14 @@ import com.example.neatsudoku.ui.screens.game.WinScreen
 import com.example.neatsudoku.ui.screens.mainmenu.MainMenuScreen
 import com.example.neatsudoku.ui.screens.settings.SettingsScreen
 import com.example.neatsudoku.ui.viewmodel.GameViewModel
-import androidx.core.content.edit
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    // Shared game ViewModel
     val gameViewModel: GameViewModel = viewModel()
     val gameState by gameViewModel.uiState.collectAsState()
 
-    // Saved color preferences
     val context = LocalContext.current
 
     val preferences = remember {
@@ -64,45 +62,46 @@ fun AppNavigation() {
         )
     }
 
+    var autoRemovePencilNotes by remember {
+        mutableStateOf(
+            preferences.getBoolean("auto_remove_pencil_notes", false)
+        )
+    }
+
+    var hideCompletedNumbers by remember {
+        mutableStateOf(
+            preferences.getBoolean("hide_completed_numbers", false)
+        )
+    }
+
     NavHost(
         navController = navController,
         startDestination = Screen.MainMenu.route
     ) {
-
-        // MAIN MENU
         composable(Screen.MainMenu.route) {
             MainMenuScreen(
                 canContinue = gameState.game != null &&
                         !gameState.isWon &&
                         !gameState.isGameOver,
-
                 onNewGameClick = {
-                    navController.navigate(
-                        Screen.DifficultySelection.route
-                    )
+                    navController.navigate(Screen.DifficultySelection.route)
                 },
-
                 onContinueClick = {
                     gameViewModel.ensureGameExists()
-
                     navController.navigate(Screen.Game.route) {
                         launchSingleTop = true
                     }
                 },
-
                 onSettingsClick = {
                     navController.navigate(Screen.Settings.route)
                 }
             )
         }
 
-        // DIFFICULTY SELECTION
         composable(Screen.DifficultySelection.route) {
             DifficultySelectionScreen(
                 onStartGame = { difficulty: Difficulty ->
-
                     gameViewModel.startNewGame(difficulty)
-
                     navController.navigate(Screen.Game.route) {
                         popUpTo(Screen.DifficultySelection.route) {
                             inclusive = true
@@ -110,14 +109,12 @@ fun AppNavigation() {
                         launchSingleTop = true
                     }
                 },
-
                 onBackClick = {
                     navController.popBackStack()
                 }
             )
         }
 
-        // GAME
         composable(Screen.Game.route) {
             GameScreen(
                 onWin = {
@@ -125,54 +122,63 @@ fun AppNavigation() {
                         launchSingleTop = true
                     }
                 },
-
                 onGameOver = {
                     navController.navigate(Screen.GameOver.route) {
                         launchSingleTop = true
                     }
                 },
-
                 playerNumberColor = playerNumberColor,
                 incorrectNumberColor = incorrectNumberColor,
+                autoRemovePencilNotes = autoRemovePencilNotes,
+                hideCompletedNumbers = hideCompletedNumbers,
                 viewModel = gameViewModel
             )
         }
 
-        // SETTINGS
         composable(Screen.Settings.route) {
             SettingsScreen(
                 playerNumberColor = playerNumberColor,
                 incorrectNumberColor = incorrectNumberColor,
+                autoRemovePencilNotes = autoRemovePencilNotes,
+                hideCompletedNumbers = hideCompletedNumbers,
 
                 onPlayerColorChange = { color ->
                     playerNumberColor = color
-
-                    preferences.edit()
-                        .putInt("player_color", color.toArgb())
-                        .apply()
+                    preferences.edit {
+                        putInt("player_color", color.toArgb())
+                    }
                 },
 
                 onIncorrectColorChange = { color ->
                     incorrectNumberColor = color
-
                     preferences.edit {
                         putInt("incorrect_color", color.toArgb())
+                    }
+                },
+
+                onAutoRemovePencilNotesChange = { enabled ->
+                    autoRemovePencilNotes = enabled
+                    preferences.edit {
+                        putBoolean("auto_remove_pencil_notes", enabled)
+                    }
+                },
+
+                onHideCompletedNumbersChange = { enabled ->
+                    hideCompletedNumbers = enabled
+                    preferences.edit {
+                        putBoolean("hide_completed_numbers", enabled)
                     }
                 }
             )
         }
 
-        // WIN
         composable(Screen.Win.route) {
             WinScreen(
                 onPlayAgainClick = {
-                    navController.navigate(
-                        Screen.DifficultySelection.route
-                    ) {
+                    navController.navigate(Screen.DifficultySelection.route) {
                         popUpTo(Screen.MainMenu.route)
                     }
                 },
-
                 onMainMenuClick = {
                     navController.popBackStack(
                         Screen.MainMenu.route,
@@ -182,17 +188,13 @@ fun AppNavigation() {
             )
         }
 
-        // GAME OVER
         composable(Screen.GameOver.route) {
             GameOverScreen(
                 onTryAgainClick = {
-                    navController.navigate(
-                        Screen.DifficultySelection.route
-                    ) {
+                    navController.navigate(Screen.DifficultySelection.route) {
                         popUpTo(Screen.MainMenu.route)
                     }
                 },
-
                 onMainMenuClick = {
                     navController.popBackStack(
                         Screen.MainMenu.route,
