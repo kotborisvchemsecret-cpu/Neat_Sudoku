@@ -7,120 +7,129 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class GameViewModel() : ViewModel() {
-    private val gameService: SudokuGameService = SudokuGameService()
+class GameViewModel : ViewModel() {
+
+    companion object {
+        const val MAX_MISTAKES = 3
+    }
+
+    private val gameService = SudokuGameService()
+
     private val _uiState = MutableStateFlow(GameUiState())
     val uiState: StateFlow<GameUiState> = _uiState.asStateFlow()
 
     fun startNewGame(difficulty: Difficulty = Difficulty.EASY) {
         val game = gameService.createNewGame(difficulty)
-
-        _uiState.value = GameUiState(
-            game = game
-        )
+        _uiState.value = GameUiState(game = game)
     }
+
+    fun ensureGameExists() {
+        if (_uiState.value.game == null) {
+            startNewGame()
+        }
+    }
+
     fun selectCell(row: Int, column: Int) {
-        _uiState.value = _uiState.value.copy(
+        val state = _uiState.value
+
+        if (state.isWon || state.isGameOver) return
+
+        _uiState.value = state.copy(
             selectedRow = row,
             selectedColumn = column
         )
     }
 
-    fun setCellValue(
-        row: Int,
-        column: Int,
-        value: Int
-    ) {
-        val currentState = _uiState.value
-        val currentGame = currentState.game ?: return
-        val currentCell = currentGame.board.cells[row][column]
-        val correctValue = currentGame.solution.cells[row][column].value
+    fun setCellValue(row: Int, column: Int, value: Int) {
+        val state = _uiState.value
+        val game = state.game ?: return
 
-        if (currentCell.isGiven) {
-            return
-        }
-        if (currentCell.value == correctValue) {
-            return
-        }
-        if ((row to column) in currentState.incorrectCells) {
-            if (currentState.isPencilMode || currentCell.value != value) {
-                return
-            }
-        }
+        if (state.isWon || state.isGameOver) return
 
-        val isPencilMode = currentState.isPencilMode
+        val cell = game.board.cells[row][column]
+        val correctValue = game.solution.cells[row][column].value
+
+        if (cell.isGiven || cell.value == correctValue) return
+
+        // An incorrect entry can be removed by tapping the same number again.
+        if ((row to column) in state.incorrectCells) {
+            if (state.isPencilMode || cell.value != value) return
+        }
 
         val updatedValue = if (
-            !isPencilMode && currentCell.value == value
+            !state.isPencilMode && cell.value == value
         ) {
             null
         } else {
             value
         }
 
+        val isCorrect = updatedValue == null ||
+                updatedValue == correctValue
 
-        val isCorrect = updatedValue == null || updatedValue == correctValue
+        val updatedCells = game.board.cells.mapIndexed { r, cells ->
+            cells.mapIndexed { c, currentCell ->
+                if (r == row && c == column) {
+                    if (state.isPencilMode) {
+                        val marks = currentCell.pencilMarks.toMutableSet()
 
-        val updatedCells = currentGame.board.cells.mapIndexed { currentRow, cells ->
-            cells.mapIndexed { currentColumn, cell ->
-                if (currentRow == row && currentColumn == column) {
-                    if (isPencilMode) {
-                        val updatedPencilMarks = cell.pencilMarks.toMutableSet()
-
-                        if (value in updatedPencilMarks) {
-                            updatedPencilMarks.remove(value)
+                        if (value in marks) {
+                            marks.remove(value)
                         } else {
-                            updatedPencilMarks.add(value)
+                            marks.add(value)
                         }
 
-                        cell.copy(pencilMarks = updatedPencilMarks)
+                        currentCell.copy(pencilMarks = marks)
                     } else {
-                        cell.copy(
+                        currentCell.copy(
                             value = updatedValue,
                             pencilMarks = emptySet()
                         )
                     }
                 } else {
-                    cell
+                    currentCell
                 }
             }
         }
 
-        val updatedBoard = currentGame.board.copy(
-            cells = updatedCells
-        )
+        val updatedBoard = game.board.copy(cells = updatedCells)
+        val updatedIncorrectCells = state.incorrectCells.toMutableSet()
 
-        val updatedIncorrectCells =
-            currentState.incorrectCells.toMutableSet()
+        var updatedMistakes = state.mistakes
 
-        if (!isPencilMode) {
+        if (!state.isPencilMode) {
             if (isCorrect) {
                 updatedIncorrectCells.remove(row to column)
             } else {
                 updatedIncorrectCells.add(row to column)
+                updatedMistakes++
             }
         }
 
-        val isWon = updatedBoard.cells.all { rowCells ->
-            rowCells.all { cell ->
-                cell.value != null
-            }
-        } && updatedBoard.cells.flatten().all { cell ->
-            cell.value == currentGame.solution.cells[cell.row][cell.column].value
-        }
+        val isGameOver = updatedMistakes >= MAX_MISTAKES
 
-        _uiState.value = currentState.copy(
-            game = currentGame.copy(
-                board = updatedBoard
-            ),
+        val isWon = !isGameOver &&
+                updatedBoard.cells.flatten().all { currentCell ->
+                    currentCell.value ==
+                            game.solution.cells[currentCell.row][currentCell.column].value
+                }
+
+        _uiState.value = state.copy(
+            game = game.copy(board = updatedBoard),
             incorrectCells = updatedIncorrectCells,
-            isWon = isWon
+            mistakes = updatedMistakes,
+            isWon = isWon,
+            isGameOver = isGameOver
         )
     }
 
     fun togglePencilMode() {
-        _uiState.value = _uiState.value.copy(
-            isPencilMode = !_uiState.value.isPencilMode
+        val state = _uiState.value
+
+        if (state.isWon || state.isGameOver) return
+
+        _uiState.value = state.copy(
+            isPencilMode = !state.isPencilMode
         )
     }
 }

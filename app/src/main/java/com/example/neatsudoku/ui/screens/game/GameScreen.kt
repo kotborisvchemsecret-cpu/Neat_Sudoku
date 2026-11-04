@@ -8,14 +8,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +44,10 @@ import com.example.neatsudoku.ui.viewmodel.GameViewModel
 @Composable
 fun GameScreen(
     onWin: () -> Unit,
-    viewModel: GameViewModel = viewModel()
+    onGameOver: () -> Unit,
+    playerNumberColor: Color,
+    incorrectNumberColor: Color,
+    viewModel: GameViewModel
 ) {
     val sudokuColors = SudokuColors(
         selectedCell = Color.LightGray,
@@ -47,18 +55,26 @@ fun GameScreen(
         gridLine = Color.Gray,
         boxLine = Color.Black,
         givenNumber = Color.Black,
-        playerNumber = Color(0xFF3F51B5),
-        incorrectNumber = Color.Red
+        playerNumber = playerNumberColor,
+        incorrectNumber = incorrectNumberColor
     )
 
     val uiState by viewModel.uiState.collectAsState()
+
     LaunchedEffect(uiState.isWon) {
         if (uiState.isWon) {
             onWin()
         }
     }
+
+    LaunchedEffect(uiState.isGameOver) {
+        if (uiState.isGameOver) {
+            onGameOver()
+        }
+    }
+
     LaunchedEffect(Unit) {
-        viewModel.startNewGame()
+        viewModel.ensureGameExists()
     }
 
     val game = uiState.game
@@ -76,15 +92,29 @@ fun GameScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Respect the status bar and camera cutout.
+        Spacer(
+            modifier = Modifier.windowInsetsTopHeight(
+                WindowInsets.safeDrawing
+            )
+        )
+
         Text(
             text = "Sudoku",
             fontSize = 32.sp
         )
 
-        Spacer(modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Mistakes: ${uiState.mistakes}/${GameViewModel.MAX_MISTAKES}",
+            color = if (uiState.mistakes > 0) Color.Red else Color.DarkGray
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
 
         SudokuGrid(
             board = game.board,
@@ -97,7 +127,7 @@ fun GameScreen(
             }
         )
 
-        Spacer(modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
@@ -113,24 +143,23 @@ fun GameScreen(
             )
         }
 
-        Spacer(modifier = Modifier.size(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        NumberPad(
+        NumberRow(
             onNumberClick = { number ->
                 val row = uiState.selectedRow
                 val column = uiState.selectedColumn
 
                 if (row != null && column != null) {
-                    viewModel.setCellValue(
-                        row = row,
-                        column = column,
-                        value = number
-                    )
+                    viewModel.setCellValue(row, column, number)
                 }
             }
         )
+
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
+
 
 @Composable
 private fun SudokuCellView(
@@ -317,29 +346,29 @@ private fun SudokuGrid(
 }
 
 @Composable
-private fun NumberPad(
+private fun NumberRow(
     onNumberClick: (Int) -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        for (row in 0 until 3) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+        for (number in 1..9) {
+            Button(
+                onClick = { onNumberClick(number) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                contentPadding = PaddingValues(0.dp)
             ) {
-                for (column in 1..3) {
-                    val number = row * 3 + column
-
-                    Button(
-                        onClick = {
-                            onNumberClick(number)
-                        }
-                    ) {
-                        Text(
-                            text = number.toString(),
-                            fontSize = 20.sp
-                        )
-                    }
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = number.toString(),
+                        fontSize = 16.sp
+                    )
                 }
             }
         }

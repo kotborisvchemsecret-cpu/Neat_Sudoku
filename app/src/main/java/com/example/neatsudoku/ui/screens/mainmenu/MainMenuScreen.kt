@@ -14,9 +14,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun MainMenuScreen(onNewGameClick: () -> Unit,
-                   onContinueClick: () -> Unit,
-                   onSettingsClick: () -> Unit) {
+fun MainMenuScreen(
+    canContinue: Boolean,
+    onNewGameClick: () -> Unit,
+    onContinueClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -28,23 +31,23 @@ fun MainMenuScreen(onNewGameClick: () -> Unit,
         )
 
         Spacer(modifier = Modifier.height(40.dp))
+
         Button(
-            onClick = onContinueClick
+            onClick = onContinueClick,
+            enabled = canContinue
         ) {
             Text("Continue")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = onNewGameClick
-        ) {
+
+        Button(onClick = onNewGameClick) {
             Text("New Game")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = onSettingsClick
-        ) {
+
+        Button(onClick = onSettingsClick) {
             Text("Settings")
         }
     }
