@@ -6,12 +6,14 @@ import com.example.neatsudoku.domain.model.SudokuCell
 import com.example.neatsudoku.domain.service.constraints.ISudokuConstraint
 import com.example.neatsudoku.domain.service.constraints.StandardSudokuConstraint
 
+/**
+ * Generates valid Sudoku solutions and puzzles under given constraints
+ *
+ * solver ensures puzzles have a unique solution
+ */
 class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudokuConstraint(),
                         private val solver: SudokuSolver = SudokuSolver(constraint)
 ) {
-    companion object{
-        private const val SIZE = 9
-    }
 
     fun generatePuzzle(solution: SudokuBoard, difficulty: Difficulty): SudokuBoard {
         val grid = solution.cells.map { row ->
@@ -23,17 +25,17 @@ class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudok
         val targetClues =
             (difficulty.minimumClues..difficulty.maximumClues).random()
 
-        val positions = (0 until SIZE * SIZE).shuffled()
+        val positions = (0 until constraint.size * constraint.size).shuffled()
 
-        var clues = SIZE * SIZE
+        var clues = constraint.size * constraint.size
 
         for (position in positions) {
             if (clues <= targetClues) {
                 break
             }
 
-            val row = position / SIZE
-            val column = position % SIZE
+            val row = position / constraint.size
+            val column = position % constraint.size
 
             val originalValue = grid[row][column]
 
@@ -52,17 +54,17 @@ class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudok
     }
 
     fun generateSolution(): SudokuBoard{
-        val grid = Array(SIZE){ IntArray(SIZE) }
+        val grid = Array(constraint.size){ IntArray(constraint.size) }
         fillGrid(grid, 0, 0)
         return createBoard(grid)
     }
 
     private fun fillGrid(grid: Array<IntArray>, row: Int, column: Int): Boolean {
-        if (row == SIZE) {
+        if (row == constraint.size) {
             return true
         }
 
-        val numbers = (1..SIZE).shuffled()
+        val numbers = (1..constraint.size).shuffled()
 
         for (number in numbers) {
             if (!constraint.isValid(grid, row, column, number)) {
@@ -71,7 +73,7 @@ class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudok
 
             grid[row][column] = number
 
-            val nextColumn = (column + 1) % SIZE
+            val nextColumn = (column + 1) % constraint.size
             val nextRow = row + if (nextColumn == 0) 1 else 0
 
             if (fillGrid(grid, nextRow, nextColumn)) {
@@ -85,8 +87,8 @@ class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudok
     }
 
     private fun createBoard(grid: Array<IntArray>): SudokuBoard {
-        val cells = List(SIZE) { row ->
-            List(SIZE) { column ->
+        val cells = List(constraint.size) { row ->
+            List(constraint.size) { column ->
                 SudokuCell(
                     row = row,
                     column = column,
@@ -102,8 +104,8 @@ class SudokuGenerator( private val constraint: ISudokuConstraint = StandardSudok
     private fun createPuzzleBoard(
         grid: Array<IntArray>
     ): SudokuBoard {
-        val cells = List(SIZE) { row ->
-            List(SIZE) { column ->
+        val cells = List(constraint.size) { row ->
+            List(constraint.size) { column ->
                 val value = grid[row][column]
 
                 SudokuCell(

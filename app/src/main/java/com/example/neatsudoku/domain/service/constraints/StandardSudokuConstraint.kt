@@ -1,10 +1,8 @@
 package com.example.neatsudoku.domain.service.constraints
 
-class StandardSudokuConstraint : ISudokuConstraint {
-    companion object {
-        private const val SIZE = 9
-        private const val BOX_SIZE = 3
-    }
+
+//Standard rules of sudoku: numbers cant repeat in row, column and box
+class StandardSudokuConstraint(override val size: Int = 9, private val boxSize: Int = 3) : ISudokuConstraint {
 
     override fun isValid(
         grid: Array<IntArray>,
@@ -22,7 +20,7 @@ class StandardSudokuConstraint : ISudokuConstraint {
         row: Int,
         number: Int
     ): Boolean {
-        for (column in 0 until SIZE) {
+        for (column in 0 until size) {
             if (grid[row][column] == number) {
                 return false
             }
@@ -36,7 +34,7 @@ class StandardSudokuConstraint : ISudokuConstraint {
         column: Int,
         number: Int
     ): Boolean {
-        for (row in 0 until SIZE) {
+        for (row in 0 until size) {
             if (grid[row][column] == number) {
                 return false
             }
@@ -51,11 +49,11 @@ class StandardSudokuConstraint : ISudokuConstraint {
         column: Int,
         number: Int
     ): Boolean {
-        val boxRow = row - row % BOX_SIZE
-        val boxColumn = column - column % BOX_SIZE
+        val boxRow = row - row % boxSize
+        val boxColumn = column - column % boxSize
 
-        for (currentRow in boxRow until boxRow + BOX_SIZE) {
-            for (currentColumn in boxColumn until boxColumn + BOX_SIZE) {
+        for (currentRow in boxRow until boxRow + boxSize) {
+            for (currentColumn in boxColumn until boxColumn + boxSize) {
                 if (grid[currentRow][currentColumn] == number) {
                     return false
                 }

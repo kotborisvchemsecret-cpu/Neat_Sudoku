@@ -8,6 +8,7 @@ import com.example.neatsudoku.domain.model.Difficulty
 import com.example.neatsudoku.ui.viewmodel.GameUiState
 import org.json.JSONArray
 import org.json.JSONObject
+import androidx.core.content.edit
 
 class GameProgressRepository(context: Context) {
 
@@ -19,7 +20,10 @@ class GameProgressRepository(context: Context) {
     companion object {
         private const val GAME_KEY = "active_game"
     }
-
+    /**
+    saves current game state so it can be resumed later
+    @param state: the game to be saved
+    */
     fun save(state: GameUiState) {
         val game = state.game ?: return
 
@@ -52,11 +56,15 @@ class GameProgressRepository(context: Context) {
             })
         }
 
-        preferences.edit()
-            .putString(GAME_KEY, json.toString())
-            .apply()
+        preferences.edit {
+            putString(GAME_KEY, json.toString())
+        }
     }
 
+    /**
+    loads a saved game state if one exists
+     @return The saved game state or null
+     */
     fun load(): GameUiState? {
         val savedJson = preferences.getString(GAME_KEY, null)
             ?: return null

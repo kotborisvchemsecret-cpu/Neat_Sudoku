@@ -3,9 +3,12 @@ package com.example.neatsudoku.domain.service
 import com.example.neatsudoku.domain.model.SudokuBoard
 import com.example.neatsudoku.domain.service.constraints.ISudokuConstraint
 
+/**
+ * Solves a sudoku board with given constraints
+ * Counts the number of solutions to ensure a puzzle has a unique solution
+ */
 class SudokuSolver(private val constraint: ISudokuConstraint) {
     companion object{
-        private const val SIZE = 9
         private const val MAX_SOLUTIONS = 2
     }
 
@@ -29,7 +32,7 @@ class SudokuSolver(private val constraint: ISudokuConstraint) {
 
         var solutionCount = 0
 
-        for (number in 1..SIZE) {
+        for (number in 1..constraint.size) {
             if (!constraint.isValid(grid, row, column, number)) {
                 continue
             }
@@ -50,8 +53,8 @@ class SudokuSolver(private val constraint: ISudokuConstraint) {
     private fun findEmptyCell(
         grid: Array<IntArray>
     ): Pair<Int, Int>? {
-        for (row in 0 until SIZE) {
-            for (column in 0 until SIZE) {
+        for (row in 0 until constraint.size) {
+            for (column in 0 until constraint.size) {
                 if (grid[row][column] == 0) {
                     return Pair(row, column)
                 }
