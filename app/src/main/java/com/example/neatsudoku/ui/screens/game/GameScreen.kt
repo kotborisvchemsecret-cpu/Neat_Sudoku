@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
 import com.example.neatsudoku.domain.model.SudokuBoard
+import com.example.neatsudoku.ui.theme.LocalSudokuColors
 import com.example.neatsudoku.ui.theme.SudokuColors
 import com.example.neatsudoku.ui.viewmodel.GameViewModel
 
@@ -50,12 +51,7 @@ fun GameScreen(
     hideCompletedNumbers: Boolean,
     viewModel: GameViewModel
 ) {
-    val sudokuColors = SudokuColors(
-        selectedCell = Color.LightGray,
-        selectedRowColumn = Color(0xFFE8E8E8),
-        gridLine = Color.Gray,
-        boxLine = Color.Black,
-        givenNumber = Color.Black,
+    val sudokuColors = LocalSudokuColors.current.copy(
         playerNumber = playerNumberColor,
         incorrectNumber = incorrectNumberColor
     )
@@ -205,7 +201,7 @@ private fun SudokuCellView(
         isSelected -> Modifier.background(colors.selectedCell)
         isInSelectedRow || isInSelectedColumn ->
             Modifier.background(colors.selectedRowColumn)
-        isSameValue -> Modifier.background(Color(0xFFEBEBEB))
+        isSameValue -> Modifier.background(colors.sameValueCell)
         else -> Modifier
     }
 
@@ -356,11 +352,10 @@ private fun SudokuGrid(
                 }
         )
 
-        // Draw the outer border last so it stays consistently black.
         Spacer(
             modifier = Modifier
                 .fillMaxSize()
-                .border(2.dp, Color.Black)
+                .border(2.dp, colors.boxLine)
         )
     }
 }

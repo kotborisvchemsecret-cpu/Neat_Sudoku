@@ -9,5 +9,6 @@ data class SudokuColors (
     val boxLine: Color,
     val givenNumber: Color,
     val playerNumber: Color,
-    val incorrectNumber: Color
+    val incorrectNumber: Color,
+    val sameValueCell: Color
 )
