@@ -10,7 +10,6 @@ An Android Sudoku application built in Kotlin.
 - Save and resume game progress.
 
 ## TODO
-- Dark/Light theme
 - Progression
 
 ## Project Status
