@@ -17,7 +17,11 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 
-
+enum class ThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
+}
 private val DarkSudokuColors = SudokuColors(
     selectedCell = Color(0xFF221E2B),
     selectedRowColumn = Color(0xFF363040),
@@ -49,7 +53,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple80,
+    primary = Purple40,
     secondary = PurpleGrey80,
     tertiary = Pink80,
     background = Color(0xFFFFFFFF),
@@ -60,10 +64,15 @@ val LocalSudokuColors = staticCompositionLocalOf {
 }
 @Composable
 fun NeatSudokuTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

@@ -118,7 +118,7 @@ fun GameScreen(
 
         Text(
             text = "Mistakes: ${uiState.mistakes}/${uiState.difficulty.allowedMistakes}",
-            color = if (uiState.mistakes > 0) Color.Red else Color.DarkGray
+            color = if (uiState.mistakes > 0) incorrectNumberColor else playerNumberColor
         )
 
         // Keep the grid close to the header.

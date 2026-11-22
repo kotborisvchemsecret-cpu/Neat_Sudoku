@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.RadioButton
+import com.example.neatsudoku.ui.theme.ThemeMode
 
 private val playerColorOptions = listOf(
     Color(0xFF3F51B5),
@@ -50,7 +52,9 @@ fun SettingsScreen(
     onPlayerColorChange: (Color) -> Unit,
     onIncorrectColorChange: (Color) -> Unit,
     onAutoRemovePencilNotesChange: (Boolean) -> Unit,
-    onHideCompletedNumbersChange: (Boolean) -> Unit
+    onHideCompletedNumbersChange: (Boolean) -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -65,6 +69,37 @@ fun SettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(40.dp))
+
+        Text(
+            text = "Appearance",
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        ThemeMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onThemeModeChange(mode) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = themeMode == mode,
+                    onClick = { onThemeModeChange(mode) }
+                )
+
+                Text(
+                    text = when (mode) {
+                        ThemeMode.SYSTEM -> "System default"
+                        ThemeMode.LIGHT -> "Light"
+                        ThemeMode.DARK -> "Dark"
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "Entered number color",
